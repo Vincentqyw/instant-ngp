@@ -242,10 +242,17 @@ if __name__ == "__main__":
 				elems=line.split(" ") # 1-4 is quat, 5-7 is trans, 9ff is filename (9, if filename contains no spaces)
 				#name = str(PurePosixPath(Path(IMAGE_FOLDER, elems[9])))
 				# why is this requireing a relitive path while using ^
-				image_rel = os.path.relpath(IMAGE_FOLDER)
-				name = str(f"./{image_rel}/{'_'.join(elems[9:])}")
-				b=sharpness(name)
-				print(name, "sharpness=",b)
+                # ORI: image_rel = os.path.relpath(IMAGE_FOLDER)
+                image_rel = IMAGE_FOLDER
+                
+                name = str(f"{image_rel}/{'_'.join(elems[9:])}")
+                # name = str(f"./{image_rel}/{'_'.join(elems[9:])}")
+                b=sharpness(name)
+                print(name, "sharpness=",b)
+                # TODO 
+                image_rel2 = Path(IMAGE_FOLDER).stem
+                name = str(f"./{image_rel2}/{'_'.join(elems[9:])}")
+				
 				image_id = int(elems[0])
 				qvec = np.array(tuple(map(float, elems[1:5])))
 				tvec = np.array(tuple(map(float, elems[5:8])))
