@@ -9,7 +9,7 @@ In each case, we train and render a MLP with multiresolution hash input encoding
 
 > __Instant Neural Graphics Primitives with a Multiresolution Hash Encoding__  
 > [Thomas Müller](https://tom94.net), [Alex Evans](https://research.nvidia.com/person/alex-evans), [Christoph Schied](https://research.nvidia.com/person/christoph-schied), [Alexander Keller](https://research.nvidia.com/person/alex-keller)  
-> _[arXiv:2201.05989 [cs.CV]](https://arxiv.org/abs/2201.05989), Jan 2022_  
+> _ACM Transactions on Graphics (__SIGGRAPH__), July 2022_  
 > __[Project page](https://nvlabs.github.io/instant-ngp)&nbsp;/ [Paper](https://nvlabs.github.io/instant-ngp/assets/mueller2022instant.pdf)&nbsp;/ [Video](https://nvlabs.github.io/instant-ngp/assets/mueller2022instant.mp4)&nbsp;/ [BibTeX](https://nvlabs.github.io/instant-ngp/assets/mueller2022instant.bib)__
 
 For business inquiries, please visit our website and submit the form: [NVIDIA Research Licensing](https://www.nvidia.com/en-us/research/inquiries/)
@@ -26,17 +26,28 @@ For business inquiries, please visit our website and submit the form: [NVIDIA Re
 - __(optional) [OptiX](https://developer.nvidia.com/optix) 7.3 or higher__ for faster mesh SDF training. Set the environment variable `OptiX_INSTALL_DIR` to the installation directory if it is not discovered automatically.
 
 
-If you are using Linux, install the following packages
+If you are using Debian based Linux distribution, install the following packages
 ```sh
 sudo apt-get install build-essential git python3-dev python3-pip libopenexr-dev libxi-dev \
                      libglfw3-dev libglew-dev libomp-dev libxinerama-dev libxcursor-dev
 ```
 
+Alternatively, if you are using Arch or Arch derivatives, install the following packages
+```sh
+sudo pacman -S base-devel cmake openexr libxi glfw openmp libxinerama livxcursor
+```
+
 We also recommend installing [CUDA](https://developer.nvidia.com/cuda-toolkit) and [OptiX](https://developer.nvidia.com/optix) in `/usr/local/` and adding the CUDA installation to your PATH.
+
 For example, if you have CUDA 11.4, add the following to your `~/.bashrc`
 ```sh
 export PATH="/usr/local/cuda-11.4/bin:$PATH"
 export LD_LIBRARY_PATH="/usr/local/cuda-11.4/lib64:$LD_LIBRARY_PATH"
+```
+
+For Arch and derivatives,
+```sh
+sudo pacman -S cuda
 ```
 
 
@@ -90,14 +101,14 @@ instant-ngp$ ./build/testbed --scene data/nerf/fox
 
 <img src="docs/assets_readme/fox.png"/>
 
-Alternatively, download any NeRF-compatible scene (e.g. [from the NeRF authors' drive](https://drive.google.com/drive/folders/1JDdLGDruGNXWnM1eqY1FNL9PlStjaKWi)).
+Alternatively, download any NeRF-compatible scene (e.g. from the [NeRF authors' drive](https://drive.google.com/drive/folders/1JDdLGDruGNXWnM1eqY1FNL9PlStjaKWi), the [SILVR dataset](https://github.com/IDLabMedia/large-lightfields-dataset), or the [DroneDeploy dataset](https://github.com/nickponline/dd-nerf-dataset)).
 Now you can run:
 
 ```sh
 instant-ngp$ ./build/testbed --scene data/nerf_synthetic/lego/transforms_train.json
 ```
 
-For more information about preparing datasets for use with our NeRF implementation, please see [this document](docs/nerf_dataset_tips.md).
+**[To prepare your own dataset for use with our NeRF implementation, click here.](docs/nerf_dataset_tips.md)**
 
 ### SDF armadillo
 
@@ -253,11 +264,21 @@ Many thanks to the authors of these brilliant projects!
 
 ```bibtex
 @article{mueller2022instant,
-    title = {Instant Neural Graphics Primitives with a Multiresolution Hash Encoding},
     author = {Thomas M\"uller and Alex Evans and Christoph Schied and Alexander Keller},
-    journal = {arXiv:2201.05989},
+    title = {Instant Neural Graphics Primitives with a Multiresolution Hash Encoding},
+    journal = {ACM Trans. Graph.},
+    issue_date = {July 2022},
+    volume = {41},
+    number = {4},
+    month = jul,
     year = {2022},
-    month = jan
+    pages = {102:1--102:15},
+    articleno = {102},
+    numpages = {15},
+    url = {https://doi.org/10.1145/3528223.3530127},
+    doi = {10.1145/3528223.3530127},
+    publisher = {ACM},
+    address = {New York, NY, USA},
 }
 ```
 

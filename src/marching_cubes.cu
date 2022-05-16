@@ -22,6 +22,7 @@
 #include <filesystem/path.h>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+
 #include <stb_image/stb_image_write.h>
 #include <stdarg.h>
 
@@ -53,7 +54,30 @@ Vector3i get_marching_cubes_res(uint32_t res_1d, const BoundingBox &aabb) {
 }
 
 #ifdef NGP_GUI
-static bool check_shader(GLuint handle, const char* desc, bool program) {
+
+void glCheckError(const char* file, unsigned int line) {
+  GLenum errorCode = glGetError();
+  while (errorCode != GL_NO_ERROR) {
+    std::string fileString(file);
+    std::string error = "unknown error";
+    // clang-format off
+    switch (errorCode) {
+      case GL_INVALID_ENUM:      error = "GL_INVALID_ENUM"; break;
+      case GL_INVALID_VALUE:     error = "GL_INVALID_VALUE"; break;
+      case GL_INVALID_OPERATION: error = "GL_INVALID_OPERATION"; break;
+      case GL_STACK_OVERFLOW:    error = "GL_STACK_OVERFLOW"; break;
+      case GL_STACK_UNDERFLOW:   error = "GL_STACK_UNDERFLOW"; break;
+      case GL_OUT_OF_MEMORY:     error = "GL_OUT_OF_MEMORY"; break;
+    }
+    // clang-format on
+
+    tlog::error() << "OpenglError : file=" << file << " line=" << line << " error:" << error;
+    errorCode = glGetError();
+  }
+}
+
+
+bool check_shader(GLuint handle, const char* desc, bool program) {
 	GLint status = 0, log_length = 0;
 	if (program) {
 		glGetProgramiv(handle, GL_LINK_STATUS, &status);
@@ -78,9 +102,9 @@ static bool check_shader(GLuint handle, const char* desc, bool program) {
 	return (GLboolean)status == GL_TRUE;
 }
 
-static GLuint compile_shader(bool pixel, const char* code) {
+GLuint compile_shader(bool pixel, const char* code) {
 	GLuint g_VertHandle = glCreateShader(pixel ? GL_FRAGMENT_SHADER : GL_VERTEX_SHADER );
-	const char* glsl_version = "#version 330";
+	const char* glsl_version = "#version 330\n";
 	const GLchar* strings[2] = { glsl_version, code};
 	glShaderSource(g_VertHandle, 2, strings, NULL);
 	glCompileShader(g_VertHandle);
@@ -105,6 +129,7 @@ void draw_mesh_gl(
 	if (verts.size() == 0 || indices.size() == 0 || mesh_render_mode == 0) {
 		return;
 	}
+
 	static GLuint vs = 0, ps = 0, program = 0, VAO = 0, VBO[3] = {}, els = 0, vbosize = 0, elssize = 0;
 	if (!VAO) {
 		glGenVertexArrays(1, &VAO);
@@ -169,6 +194,7 @@ void main()
 	p.xy *= vec2(2.0, -2.0) * f.xy / vec2(res.xy);
 	p.w = p.z;
 	p.z = p.z - 0.1;
+	p.xy += cen * p.w;
 	if (mode == 2) {
 		vtxcol = normalize(nor) * 0.5 + vec3(0.5); // visualize vertex normals
 	} else {
@@ -206,7 +232,7 @@ void main() {
 	glUseProgram(program);
 	glUniformMatrix4fv(glGetUniformLocation(program, "camera"), 1, GL_FALSE, (GLfloat*)&world2view);
 	glUniform2f(glGetUniformLocation(program, "f"), focal_length.x(), focal_length.y());
-	glUniform2f(glGetUniformLocation(program, "cen"), screen_center.x(), screen_center.y());
+	glUniform2f(glGetUniformLocation(program, "cen"), screen_center.x()*2.f-1.f, screen_center.y()*-2.f+1.f);
 	glUniform2i(glGetUniformLocation(program, "res"), resolution.x(), resolution.y());
 	glUniform1i(glGetUniformLocation(program, "mode"), mesh_render_mode);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, els);
@@ -928,43 +954,45 @@ void save_mesh(
 	fclose(f);
 }
 
-void save_density_grid_to_png(const GPUMemory<float>& density, const char* filename, Vector3i res3d, float thresh, bool swap_y_z) {
+void save_density_grid_to_png(const GPUMemory<float>& density, const char* filename, Vector3i res3d, float thresh, bool swap_y_z, float density_range) {
+	float density_scale = 128.f / density_range; // map from -density_range to density_range into 0-255
 	std::vector<float> density_cpu;
 	density_cpu.resize(density.size());
 	density.copy_to_host(density_cpu);
 	uint32_t num_voxels = 0;
 	uint32_t num_lattice_points_near_zero_crossing = 0;
+	uint32_t N = res3d.x()*res3d.y()*res3d.z();
 	for (int z = 1; z < res3d.z() - 1; ++z) {
 		for (int y = 1; y < res3d.y() - 1; ++y) {
-			for (int x = 1; x < res3d.z() - 1; ++x) {
+			for (int x = 1; x < res3d.x() - 1; ++x) {
 				int count = 0;
-				count += density_cpu[(x+0)+(y+0)*res3d.x()+(z+0)*res3d.x()*res3d.z()] < thresh;
-				count += density_cpu[(x+1)+(y+0)*res3d.x()+(z+0)*res3d.x()*res3d.z()] < thresh;
-				count += density_cpu[(x+0)+(y+1)*res3d.x()+(z+0)*res3d.x()*res3d.z()] < thresh;
-				count += density_cpu[(x+1)+(y+1)*res3d.x()+(z+0)*res3d.x()*res3d.z()] < thresh;
-				count += density_cpu[(x+0)+(y+0)*res3d.x()+(z+1)*res3d.x()*res3d.z()] < thresh;
-				count += density_cpu[(x+1)+(y+0)*res3d.x()+(z+1)*res3d.x()*res3d.z()] < thresh;
-				count += density_cpu[(x+0)+(y+1)*res3d.x()+(z+1)*res3d.x()*res3d.z()] < thresh;
-				count += density_cpu[(x+1)+(y+1)*res3d.x()+(z+1)*res3d.x()*res3d.z()] < thresh;
+				count += density_cpu[(x+0)+(y+0)*res3d.x()+(z+0)*res3d.x()*res3d.y()] < thresh;
+				count += density_cpu[(x+1)+(y+0)*res3d.x()+(z+0)*res3d.x()*res3d.y()] < thresh;
+				count += density_cpu[(x+0)+(y+1)*res3d.x()+(z+0)*res3d.x()*res3d.y()] < thresh;
+				count += density_cpu[(x+1)+(y+1)*res3d.x()+(z+0)*res3d.x()*res3d.y()] < thresh;
+				count += density_cpu[(x+0)+(y+0)*res3d.x()+(z+1)*res3d.x()*res3d.y()] < thresh;
+				count += density_cpu[(x+1)+(y+0)*res3d.x()+(z+1)*res3d.x()*res3d.y()] < thresh;
+				count += density_cpu[(x+0)+(y+1)*res3d.x()+(z+1)*res3d.x()*res3d.y()] < thresh;
+				count += density_cpu[(x+1)+(y+1)*res3d.x()+(z+1)*res3d.x()*res3d.y()] < thresh;
 				if (count>0 && count<8) {
 					num_voxels++;
 				}
 
-				bool mysign = density_cpu[(x+0)+(y+0)*res3d.x()+(z+0)*res3d.x()*res3d.z()] < thresh;
+				bool mysign = density_cpu[(x+0)+(y+0)*res3d.x()+(z+0)*res3d.x()*res3d.y()] < thresh;
 				bool near_zero_crossing=false;
-				near_zero_crossing |= (density_cpu[(x+1)+(y+0)*res3d.x()+(z+0)*res3d.x()*res3d.z()] < thresh) != mysign;
-				near_zero_crossing |= (density_cpu[(x-1)+(y+0)*res3d.x()+(z+0)*res3d.x()*res3d.z()] < thresh) != mysign;
-				near_zero_crossing |= (density_cpu[(x+0)+(y+1)*res3d.x()+(z+0)*res3d.x()*res3d.z()] < thresh) != mysign;
-				near_zero_crossing |= (density_cpu[(x+0)+(y-1)*res3d.x()+(z+0)*res3d.x()*res3d.z()] < thresh) != mysign;
-				near_zero_crossing |= (density_cpu[(x+0)+(y+0)*res3d.x()+(z+1)*res3d.x()*res3d.z()] < thresh) != mysign;
-				near_zero_crossing |= (density_cpu[(x+0)+(y+0)*res3d.x()+(z-1)*res3d.x()*res3d.z()] < thresh) != mysign;
+				near_zero_crossing |= (density_cpu[(x+1)+(y+0)*res3d.x()+(z+0)*res3d.x()*res3d.y()] < thresh) != mysign;
+				near_zero_crossing |= (density_cpu[(x-1)+(y+0)*res3d.x()+(z+0)*res3d.x()*res3d.y()] < thresh) != mysign;
+				near_zero_crossing |= (density_cpu[(x+0)+(y+1)*res3d.x()+(z+0)*res3d.x()*res3d.y()] < thresh) != mysign;
+				near_zero_crossing |= (density_cpu[(x+0)+(y-1)*res3d.x()+(z+0)*res3d.x()*res3d.y()] < thresh) != mysign;
+				near_zero_crossing |= (density_cpu[(x+0)+(y+0)*res3d.x()+(z+1)*res3d.x()*res3d.y()] < thresh) != mysign;
+				near_zero_crossing |= (density_cpu[(x+0)+(y+0)*res3d.x()+(z-1)*res3d.x()*res3d.y()] < thresh) != mysign;
 				if (near_zero_crossing) {
 					num_lattice_points_near_zero_crossing++;
 				}
 			}
 		}
 	}
-	uint32_t N = res3d.x()*res3d.y()*res3d.z();
+
 
 	if (swap_y_z) {
 		res3d = {res3d.x(), res3d.z(), res3d.y()};
@@ -983,15 +1011,16 @@ void save_density_grid_to_png(const GPUMemory<float>& density, const char* filen
 			int z = (u / res3d.x()) + (v / res3d.y()) * nacross;
 			if (z < res3d.z()) {
 				if (swap_y_z) {
-					*dst++ = (uint8_t)tcnn::clamp((density_cpu[x + z*res3d.x() + y*res3d.x()*res3d.z()]-thresh)*32.f + 128.5f, 0.f, 255.f);
+					*dst++ = (uint8_t)tcnn::clamp((density_cpu[x + z*res3d.x() + y*res3d.x()*res3d.z()]-thresh)*density_scale + 128.5f, 0.f, 255.f);
 				} else {
-					*dst++ = (uint8_t)tcnn::clamp((density_cpu[x + (res3d.y()-1-y)*res3d.x() + z*res3d.x()*res3d.y()]-thresh)*32.f + 128.5f, 0.f, 255.f);
+					*dst++ = (uint8_t)tcnn::clamp((density_cpu[x + (res3d.y()-1-y)*res3d.x() + z*res3d.x()*res3d.y()]-thresh)*density_scale + 128.5f, 0.f, 255.f);
 				}
 			} else {
 				*dst++ = 0;
 			}
 		}
 	}
+
 	stbi_write_png(filename, w, h, 1, pngpixels, w);
 
 	tlog::success() << "Wrote density PNG to " << filename;
