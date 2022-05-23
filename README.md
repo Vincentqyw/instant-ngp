@@ -24,6 +24,7 @@ For business inquiries, please visit our website and submit the form: [NVIDIA Re
 - __[CUDA](https://developer.nvidia.com/cuda-toolkit) v10.2 or higher__ and __[CMake](https://cmake.org/) v3.21 or higher__.
 - __(optional) [Python](https://www.python.org/) 3.7 or higher__ for interactive bindings. Also, run `pip install -r requirements.txt`.
 - __(optional) [OptiX](https://developer.nvidia.com/optix) 7.3 or higher__ for faster mesh SDF training. Set the environment variable `OptiX_INSTALL_DIR` to the installation directory if it is not discovered automatically.
+- __(optional) [Vulkan SDK](https://vulkan.lunarg.com/)__ for DLSS support.
 
 
 If you are using Debian based Linux distribution, install the following packages
@@ -205,7 +206,7 @@ __Q:__ The NeRF reconstruction of my custom dataset looks bad; what can I do?
 __A:__ There could be multiple issues:
 - COLMAP might have been unable to reconstruct camera poses.
 - There might have been movement or blur during capture. Don't treat capture as an artistic task; treat it as photogrammetry. You want _\*as little blur as possible\*_ in your dataset (motion, defocus, or otherwise) and all objects must be _\*static\*_ during the entire capture. Bonus points if you are using a wide-angle lens (iPhone wide angle works well), because it covers more space than narrow lenses.
-- The dataset parameters (in particular `aabb_scale`) might have been tuned suboptimally. We recommend starting with `aabb_scale=16` and then decreasing it to `8`, `4`, `2`, and `1` until you get optimal quality.
+- The dataset parameters (in particular `aabb_scale`) might have been tuned suboptimally. We recommend starting with `aabb_scale=16` and then increasing or decreasing it by factors of two until you get optimal quality.
 - Carefully read [our NeRF training & dataset tips](https://github.com/NVlabs/instant-ngp/blob/master/docs/nerf_dataset_tips.md).
 
 ##
