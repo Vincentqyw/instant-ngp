@@ -16,10 +16,13 @@ import common
 import pyngp as ngp # noqa
 import numpy as np
 
-def render_video(resolution, numframes, scene, name, spp, fps, exposure=0):
+def render_video(resolution, numframes, scene, name, spp, fps, 
+                 snapshot = "base.msgpack",
+                 cam_path = "base_cam.json",
+                 exposure=0):
     testbed = ngp.Testbed(ngp.TestbedMode.Nerf)
-    testbed.load_snapshot(os.path.join(scene, "base.msgpack"))
-    testbed.load_camera_path(os.path.join(scene, "base_cam.json"))
+    testbed.load_snapshot(os.path.join(scene, snapshot))
+    testbed.load_camera_path(os.path.join(scene, cam_path))
 
     tmp_dir = os.path.join(scene, "temp")
 
@@ -48,6 +51,8 @@ def parse_args():
     parser.add_argument("--n_seconds", type=int, default=1, help="Number of steps to train for before quitting.")
     parser.add_argument("--fps", type=int, default=60, help="number of fps")
     parser.add_argument("--render_name", type=str, default="", help="name of the result video")
+    parser.add_argument("--snapshot", type=str, default="base.msgpack", help="name of nerf model")
+    parser.add_argument("--cam_path", type=str, default="base_cam.json", help="name of the camera motion path")
 
 
     args = parser.parse_args()
@@ -56,4 +61,11 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()	
 
-    render_video([args.width, args.height], args.n_seconds*args.fps, args.scene, args.render_name, spp=8, fps=args.fps)
+    render_video([args.width, args.height], 
+                 args.n_seconds*args.fps, 
+                 args.scene, 
+                 args.render_name, 
+                 spp=8, 
+                 snapshot = args.snapshot, 
+                 cam_path = args.cam_path, 
+                 fps=args.fps)
