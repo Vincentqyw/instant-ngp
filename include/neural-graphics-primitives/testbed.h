@@ -379,6 +379,11 @@ public:
 	CameraKeyframe copy_camera_to_keyframe() const;
 	void set_camera_from_keyframe(const CameraKeyframe& k);
 	void set_camera_from_time(float t);
+
+	// get camera ngp pose
+	CameraKeyframe get_camera_from_time(float t); //t \in [0,1]
+	void set_ngp_camera_matrix(const Eigen::Matrix<float, 3, 4>& cam));
+
 	void update_loss_graph();
 	void load_camera_path(const std::string& filepath_string);
 

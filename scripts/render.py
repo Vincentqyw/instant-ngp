@@ -16,6 +16,43 @@ import common
 import pyngp as ngp # noqa
 import numpy as np
 
+import commentjson as json
+from scipy.spatial.transform import Rotation as R
+
+
+def load_cam_path(path):
+    with open(path) as f:
+        data = json.load(f)
+    t = data["time"]
+    frames = data["path"]
+    return frames,t    
+
+def ngp_to_nerf(xf):
+    mat = np.copy(xf)
+    mat = mat[[2,0,1],:] #swap axis
+
+    mat[:,1] *= -1 #flip axis
+    mat[:,2] *= -1
+
+    mat[:,3] -= [0.5,0.5,0.5] # translation and re-scale
+    mat[:,3] /= 0.33
+    
+    return mat
+
+def nerf_to_ngp(xf):
+    mat = np.copy(xf)
+    mat = mat[:-1,:] 
+
+    mat[:,1] *= -1 #flip axis
+    mat[:,2] *= -1
+
+    mat[:,3] *= 0.33
+    mat[:,3] += [0.5,0.5,0.5] # translation and re-scale
+    mat = mat[[1,2,0],:]
+    return mat
+
+
+
 def render_video(resolution, numframes, scene, name, spp, fps, 
                  snapshot = "base.msgpack",
                  cam_path = "base_cam.json",

@@ -1791,6 +1791,17 @@ void Testbed::set_camera_from_time(float t) {
 	set_camera_from_keyframe(m_camera_path.eval_camera_path(t));
 }
 
+// get camera ngp pose
+CameraKeyframe Testbed::get_camera_from_time(float t)
+{
+	return m_camera_path.eval_camera_path(t);
+}
+void Testbed::set_ngp_camera_matrix(const Eigen::Matrix<float, 3, 4>& cam))
+{
+	m_camera = cam;
+}
+
+
 void Testbed::update_loss_graph() {
 	m_loss_graph[m_loss_graph_samples++ % m_loss_graph.size()] = std::log(m_loss_scalar.val());
 }
