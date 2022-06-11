@@ -399,7 +399,7 @@ PYBIND11_MODULE(pyngp, m) {
 		)
 		// export camera ngp pose
 		.def("get_camera_from_time", &Testbed::get_camera_from_time, "get cam ngp path from time t in [0,1]", py::arg("t"))
-		.def("set_ngp_camera_matrix", &Testbed::set_ngp_camera_matrix, "set cam ngp path from time t in [0,1]", py::arg("k"))
+		.def("set_ngp_camera_matrix", &Testbed::set_ngp_camera_matrix, "set cam ngp matrix", py::arg("k"))
 		.def("set_camera_from_keyframe", &Testbed::set_camera_from_keyframe, "set ngp keyframe pose", py::arg("k"))
 
 		;
