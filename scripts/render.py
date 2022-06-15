@@ -19,6 +19,10 @@ import numpy as np
 import commentjson as json
 from scipy.spatial.transform import Rotation as R
 
+sys.path.append('path_to_colmap_python_scripts')
+import read_write_model
+from read_write_model import Camera, Point3D,Image
+from read_write_model import read_cameras_text, read_model, write_model,qvec2rotmat,rotmat2qvec
 
 def load_cam_path(path):
     with open(path) as f:
@@ -26,6 +30,12 @@ def load_cam_path(path):
     t = data["time"]
     frames = data["path"]
     return frames,t    
+
+def load_transforms(path):
+    print(f"path = {path}")
+    with open(path) as f:
+        frames = json.load(f)
+    return frames
 
 def ngp_to_nerf(xf):
     mat = np.copy(xf)
@@ -51,9 +61,49 @@ def nerf_to_ngp(xf):
 
     return mat
 
-def nerf_to_colmap(xf):
+def colmap_to_nerf(xf, rot, totp, scale_trans):
+    Tcw = np.copy(xf)
+    Twc = np.linalg.inv(Tcw)
+    
+    T_r = np.eye(4)
+    T_r[1,1] *= -1
+    T_r[2,2] *= -1
+    T_l = np.eye(4)
+    T_l = T_l[[1,0,2,3],:]
+    T_l[2,2] *= -1
+    
+    Twc = T_l @ Twc @ T_r
+    
+    # re-scale to center     
+    Twc = rot @ Twc
+    Twc[0:3,3] -= totp
+    Twc[0:3,3] /= scale_trans
+    
+    return Twc
+
+
+def nerf_to_colmap(xf, rot, totp, scale_trans):
     mat = np.copy(xf)
-    return mat
+    mat[0:3,3] /= scale_trans
+    mat[0:3,3] += totp
+    
+    R_inv = np.linalg.inv(rot)
+    mat = R_inv @ mat
+    
+    T_r = np.eye(4)
+    T_r[1,1] *= -1
+    T_r[2,2] *= -1
+    T_r_inv = np.linalg.inv(T_r)
+    
+    T_l = np.eye(4)
+    T_l = T_l[[1,0,2,3],:]
+    T_l[2,2] *= -1
+    T_l_inv = np.linalg.inv(T_l)
+    
+    Twc = T_l_inv @ mat @ T_r_inv
+    Tcw = np.linalg.inv(Twc)
+    
+    return Tcw
 
 
 def render_video(resolution, numframes, scene, name, spp, fps, 
@@ -136,6 +186,7 @@ def render_frames_spline(resolution, numframes, scene, name,
                  fov = 50.625,
                  snapshot = "base.msgpack",
                  cam_path = "base_cam.json",
+                 transform_path = "transform.json",
                  exposure=0):
 
     testbed = ngp.Testbed(ngp.TestbedMode.Nerf)
@@ -150,9 +201,18 @@ def render_frames_spline(resolution, numframes, scene, name,
     if not os.path.exists(tmp_dir):
         os.makedirs(tmp_dir)
 
+    # loading transforms -> colmap model files
+    data = load_transforms(transform_path)
+    rotation = np.array(data["rotation"])
+    totp = np.array(data["totp"])
+    sf = data["scale_trans"]
+    images = {}
+
+    bottom = np.array([0.0, 0.0, 0.0, 1.0]).reshape([1, 4])
     xform = np.zeros([3,4]) # ngp pose
     
     testbed.fov = fov # todo: fix fov
+
     for i in tqdm(list(range(min(numframes,numframes+1))), unit="frames", desc=f"Rendering"):
         testbed.camera_smoothing = i > 0
         ts = float(i)/numframes
@@ -166,6 +226,23 @@ def render_frames_spline(resolution, numframes, scene, name,
         xform[:3,:3] = mat
         xform[:,-1:] = np.array(tvec).reshape(3,-1)
         xform_nerf = ngp_to_nerf(xform)
+
+        if False:
+            xform_nerf44 = np.concatenate([xform_nerf, bottom], 0)
+
+            xform_colmap = nerf_to_colmap(xform_nerf44,rotation,totp,sf)
+
+            qvec         = np.array(rotmat2qvec(xform_colmap[0:3,0:3]))
+            tvec         = np.array(xform_colmap[0:3,3])
+            camera_id    = int(_camera_id_)
+            image_name   = f"{i:04d}.png"
+            xys          = np.array([])
+            point3D_ids  = np.array([])
+            image_id     = i + 10000
+            images[image_id] = Image(
+                    id=image_id, qvec=qvec, tvec=tvec,
+                    camera_id=camera_id, name=image_name,
+                    xys=xys, point3D_ids=point3D_ids)
 
         # three ways to set camera render pose
 

@@ -227,6 +227,11 @@ if __name__ == "__main__":
             "w": w,
             "h": h,
             "aabb_scale": AABB_SCALE,
+            "fovx": fovx,
+            "fovy": fovy,
+            "rotation": [],
+            "totp": [],
+            "scale_trans": 1.0,
             "frames": [],
         }
 
@@ -276,6 +281,7 @@ if __name__ == "__main__":
     R = rotmat(up,[0,0,1]) # rotate up vector to [0,0,1]
     R = np.pad(R,[0,1])
     R[-1, -1] = 1
+    out["rotation"] = R
 
 
     for f in out["frames"]:
@@ -294,6 +300,7 @@ if __name__ == "__main__":
                 totp += p*w
                 totw += w
     totp /= totw
+    out["totp"] = totp
     print(totp) # the cameras are looking at totp
     for f in out["frames"]:
         f["transform_matrix"][0:3,3] -= totp
@@ -303,9 +310,15 @@ if __name__ == "__main__":
         avglen += np.linalg.norm(f["transform_matrix"][0:3,3])
     avglen /= nframes
     print("avg camera distance from origin", avglen)
+    sf = 4.0 / avglen
+    out["scale_trans"] = sf
     for f in out["frames"]:
-        f["transform_matrix"][0:3,3] *= 4.0 / avglen # scale to "nerf sized"
+        f["transform_matrix"][0:3,3] *= sf # scale to "nerf sized"
 
+    out["rotation"] = out["rotation"].tolist()
+    out["totp"] = out["totp"].tolist()
+    out["scale_trans"] = out["scale_trans"].tolist()
+    
     for f in out["frames"]:
         f["transform_matrix"] = f["transform_matrix"].tolist()
     print(nframes,"frames")
