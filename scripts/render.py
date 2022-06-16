@@ -77,7 +77,7 @@ def colmap_to_nerf(xf, rot, totp, scale_trans):
     # re-scale to center     
     Twc = rot @ Twc
     Twc[0:3,3] -= totp
-    Twc[0:3,3] /= scale_trans
+    Twc[0:3,3] *= scale_trans
     
     return Twc
 
@@ -211,6 +211,7 @@ def render_frames_spline(resolution, numframes, scene, name,
     bottom = np.array([0.0, 0.0, 0.0, 1.0]).reshape([1, 4])
     xform = np.zeros([3,4]) # ngp pose
     
+    testbed.fov_axis = 0
     testbed.fov = fov # todo: fix fov
 
     for i in tqdm(list(range(min(numframes,numframes+1))), unit="frames", desc=f"Rendering"):
@@ -253,6 +254,7 @@ def render_frames_spline(resolution, numframes, scene, name,
         # testbed.set_ngp_camera_matrix(xform)
 
         # 3. set keyframe with additional params
+        kf.fov = fov 
         testbed.set_camera_from_keyframe(kf)
 
         frame = testbed.render(resolution[0], resolution[1], spp, True)

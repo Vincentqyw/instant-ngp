@@ -460,6 +460,8 @@ PYBIND11_MODULE(pyngp, m) {
 	// export camerakeyframe interface
 	py::class_<CameraKeyframe> camera_keyframe(m, "CameraKeyframe");
 	camera_keyframe
+		.def(py::init<const Eigen::Vector4f &, const Eigen::Vector3f &, float, float, float, float>())
+		.def(py::init<Eigen::Matrix<float, 3, 4>, float, float, float, float>())
 		.def_readwrite("R", &CameraDistortion::R)
 		.def_readwrite("T", &CameraDistortion::T)
 		.def_readwrite("slice", &CameraDistortion::slice)
